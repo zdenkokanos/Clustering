@@ -1,62 +1,50 @@
 import matplotlib.pyplot as plt
-import random
 import numpy as np
+import random
 
 ITERATIONS = 20000
 INIT_POINTS = 20
-#coordinate_list = np.zeros((0, 2))  # Start with an empty array
-
-
-def create_point(x, y):
-    plt.plot(x, y, 'o', markersize=1, markeredgecolor='black')
-
 
 def init_points(coordinates):
-    for i in range(INIT_POINTS):
-        x = random.randint(-5000, 5000)
-        y = random.randint(-5000, 5000)
-        coordinates.append([x, y])
-
+    while len(coordinates) < INIT_POINTS:
+        x = np.random.randint(-5000, 5000)
+        y = np.random.randint(-5000, 5000)
+        coordinates.append((x, y))
+    for i in range(ITERATIONS):
+        random_index = np.random.randint(len(coordinates))
+        x, y = coordinates[random_index]
+        coordinates.append((gen_offset(x, y)))
+    return np.array(coordinates)
 
 def offset_calculation(coordinate):
     offset = 100
     if 5000 - abs(coordinate) < 100:
         offset = (5000 - abs(coordinate)) // 2
-    print(offset)
     return offset
 
 
 def gen_offset(x, y):
-    a = offset_calculation(x)
-    b = offset_calculation(y)
-    x_offset = max(-5000, min(5000, x + random.randint(-a, a)))
-    y_offset = max(-5000, min(5000, y + random.randint(-b, b)))
-    return [x_offset, y_offset]
+    x_offset = offset_calculation(x)
+    y_offset = offset_calculation(y)
+    x = x + random.randint(-x_offset, x_offset)
+    y = y + random.randint(-y_offset, y_offset)
+    return x, y
 
 
-def main_part(coordinates):
-    for i in range(ITERATIONS):
-        random_index = np.random.randint(len(coordinates))
-        x, y = coordinates[random_index]
-        new_point = gen_offset(x, y)
-        coordinates.append(new_point)
+#def algomerative_centroid(coordinates):
 
 
-def generate_points(coordinates):
-    for coordinate in coordinates:
-        create_point(coordinate[0], coordinate[1])
-
-
-def main():
+def show_clusters(coordinates_array):
     plt.xlim(-5000, 5000)
     plt.ylim(-5000, 5000)
-
-    coordinates = []  # Use a list to store points
-    init_points(coordinates)
-    main_part(coordinates)
-
-    generate_points(coordinates)
+    plt.scatter(coordinates_array[:, 0], coordinates_array[:, 1], s=1, edgecolor='black')
     plt.show()
+
+def main():
+    coordinates = []  # Use a list to store points
+    coordinates = init_points(coordinates)
+    #algomerative_centroid(coordinates)
+    show_clusters(coordinates)
 
 
 # Entry point
