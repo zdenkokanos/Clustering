@@ -9,12 +9,12 @@ def init_points(coordinates):
     while len(coordinates) < INIT_POINTS:
         x = np.random.randint(-5000, 5000)
         y = np.random.randint(-5000, 5000)
-        coordinates.append((x, y))
+        coordinates.add((x, y))
     for i in range(ITERATIONS):
-        random_index = np.random.randint(len(coordinates))
-        x, y = coordinates[random_index]
-        coordinates.append((gen_offset(x, y)))
-    return np.array(coordinates)
+        random_coordinate = random.choice(list(coordinates))
+        x, y = random_coordinate
+        coordinates.add((gen_offset(x, y)))
+    return np.array(list(coordinates))
 
 def offset_calculation(coordinate):
     offset = 100
@@ -31,7 +31,7 @@ def gen_offset(x, y):
     return x, y
 
 
-#def algomerative_centroid(coordinates):
+def agglomerative_centroid(coordinates):
 
 
 def show_clusters(coordinates_array):
@@ -41,9 +41,9 @@ def show_clusters(coordinates_array):
     plt.show()
 
 def main():
-    coordinates = []  # Use a list to store points
+    coordinates = set()  # Use a list to store points
     coordinates = init_points(coordinates)
-    #algomerative_centroid(coordinates)
+    agglomerative_centroid(coordinates)
     show_clusters(coordinates)
 
 
