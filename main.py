@@ -2,9 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-#numpy.mean vsade kde sa da
-
-ITERATIONS = 20000
+ITERATIONS = 1000
 INIT_POINTS = 20
 
 def offset_calculation(coordinate):
@@ -12,7 +10,6 @@ def offset_calculation(coordinate):
     if 5000 - abs(coordinate) < 100:
         offset = (5000 - abs(coordinate)) // 2
     return offset
-
 
 def gen_offset(x, y):
     x_offset = offset_calculation(x)
@@ -22,63 +19,90 @@ def gen_offset(x, y):
     return np.array([x, y])  # Return as a NumPy array
 
 def init_points():
-    coordinates_set = set()  # Use a set to store unique points
-    coordinates_array = []  # Use a list to store points as NumPy arrays
+    coordinates_set = set()
+    coordinates_array = []
 
-    # Initialize with random unique points
     while len(coordinates_set) < INIT_POINTS:
         x = np.random.randint(-5000, 5000)
         y = np.random.randint(-5000, 5000)
-        point = np.array([x, y])  # Create a NumPy array
-        coordinates_set.add(tuple(point))  # Store as tuple for uniqueness check
-        coordinates_array.append(point)  # Store as NumPy array
+        point = np.array([x, y])
+        coordinates_set.add(tuple(point))
+        coordinates_array.append(point)
 
-    # Generate new points until the desired total count is reached
     while len(coordinates_array) < ITERATIONS + INIT_POINTS:
         random_coordinate = random.choice(coordinates_array)
         x, y = random_coordinate
         new_point = gen_offset(x, y)
-
-        # Check for uniqueness using the set
         if tuple(new_point) not in coordinates_set:
-            coordinates_set.add(tuple(new_point))  # Add as a tuple for the set
-            coordinates_array.append(new_point)  # Keep the new point as a NumPy array
+            coordinates_set.add(tuple(new_point))
+            coordinates_array.append(new_point)
 
-    return np.array(coordinates_array)  # Convert the list of arrays to a NumPy array
+    return np.array(coordinates_array)
 
 def euclidean_distance(point1, point2):
     return np.sqrt(np.sum((point1 - point2) ** 2))
 
-def distance_matrix(coordinates):
-    num_points = coordinates.shape[0]  # returns a number of rows
+def distance_matrix(centroids):
+    # num_points = centroids.shape[0]
+    num_points = len(centroids)
     dist_matrix = np.zeros((num_points, num_points))
 
     for i in range(num_points):
-        for j in range(i + 1, num_points):  # only calculate for j > i
-            dist = euclidean_distance(coordinates[i], coordinates[j])
+        for j in range(i + 1, num_points):
+            dist = euclidean_distance(centroids[i], centroids[j])
             dist_matrix[i, j] = dist
-            dist_matrix[j, i] = dist  # sets the symmetric entry
+            dist_matrix[j, i] = dist
+    np.fill_diagonal(dist_matrix, np.inf)
     return dist_matrix
 
-def agglomerative_centroid(clusters):
-    dist_matrix = distance_matrix(clusters)
-    print(clusters)
+def agglomerative_centroid(clusters, target_clusters=10):
+    while len(clusters) > target_clusters:
+        centroids = []
+        for cluster in clusters:
+            centroid = np.mean(cluster, axis=0)
+            centroids.append(centroid)
+
+        dist_matrix = distance_matrix(np.array(centroids))
+
+        cluster1, cluster2 = np.unravel_index(np.argmin(dist_matrix), dist_matrix.shape)
+        clusters[cluster1].extend(clusters[cluster2])
+        del clusters[cluster2]
+        print(f"Merged clusters {cluster1} and {cluster2}, Total clusters remaining: {len(clusters)}")
+
+    final_centroids = []
+    for cluster in clusters:
+        final_centroid = np.mean(cluster, axis=0)
+        final_centroids.append(final_centroid)
+
+    print("Final centroids:", final_centroids)
+    return np.array(final_centroids), clusters
 
 
-
-def show_clusters(coordinates_array):
+def show_clusters(final_centroids, clusters):
+    plt.figure(figsize=(8, 8))
     plt.xlim(-5000, 5000)
     plt.ylim(-5000, 5000)
-    plt.scatter(coordinates_array[:, 0], coordinates_array[:, 1], s=1, edgecolor='black')  # Correctly plot x and y
+
+    colors = plt.colormaps.get_cmap('tab10', len(clusters))
+
+    for idx, cluster in enumerate(clusters):
+        cluster_points = np.array(cluster)
+        centroid = np.mean(cluster_points, axis=0)
+        plt.scatter(cluster_points[:, 0], cluster_points[:, 1], s=5, color=colors(idx), label=f"Cluster {idx + 1}")
+        plt.scatter(centroid[0], centroid[1], s=100, color=colors(idx), edgecolor='black', marker='X')
+
+    plt.title("Agglomerative Clustering Visualization with Centroids")
+    plt.legend()
     plt.show()
-    print(len(coordinates_array))
+
 
 def main():
-    random.seed(50)  # Set seed for the random module
-    np.random.seed(50)  # Set seed for Numpy's random module
+    random.seed(50)
+    np.random.seed(50)
     coordinates = init_points()
-    agglomerative_centroid(coordinates)
-    show_clusters(coordinates)
+    clusters = [[point] for point in coordinates]
+    final_centroids, final_clusters = agglomerative_centroid(clusters, target_clusters=5)
+    show_clusters(final_centroids, final_clusters)
 
 
 if __name__ == "__main__":
