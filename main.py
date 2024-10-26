@@ -2,8 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import random
+import heapq
 
-ITERATIONS = 1000
+ITERATIONS = 100
 INIT_POINTS = 20
 
 def offset_calculation(coordinate):
@@ -38,19 +39,6 @@ def init_points():
 def euclidean_distance(point1, point2):
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
-# def distance_matrix(centroids):
-#     # num_points = centroids.shape[0]
-#     num_points = len(centroids)
-#     dist_matrix = np.zeros((num_points, num_points))
-#
-#     for i in range(num_points):
-#         for j in range(i + 1, num_points):
-#             dist = euclidean_distance(centroids[i], centroids[j])
-#             dist_matrix[i, j] = dist
-#             dist_matrix[j, i] = dist
-#     np.fill_diagonal(dist_matrix, np.inf)
-#     return dist_matrix
-
 def compute_centroid(cluster):
     return np.mean(cluster, axis=0)
 
@@ -66,18 +54,39 @@ def distance_matrix(clusters):
 
 def agglomerative_centroid(clusters):
     target_clusters = 10
+    dist_matrix = distance_matrix(clusters)  # Initialize the distance matrix
+
     while len(clusters) > target_clusters:
-        dist_matrix = distance_matrix(clusters)
+        # Find the indices of the two closest clusters
         cluster1, cluster2 = np.unravel_index(np.argmin(dist_matrix), dist_matrix.shape)
+
         # Merge the two closest clusters
+        print(cluster1, cluster2, len(clusters))
         clusters[cluster1].extend(clusters[cluster2])
         del clusters[cluster2]  # Remove the merged cluster
+
+        dist_matrix = np.delete(dist_matrix, cluster2, axis=0)  # Remove the row for cluster2
+        dist_matrix = np.delete(dist_matrix, cluster2, axis=1)  # Remove the column for cluster2
+
+        # Update the distance matrix
+        # Set the distance from the merged cluster to itself to inf
+        dist_matrix[cluster1, cluster1] = np.inf
+
+        # Update distances for the merged cluster with respect to the remaining clusters
+        for i in range(len(clusters)):
+            if i != cluster1:  # Avoid updating the distance to itself
+                dist_matrix[cluster1, i] = euclidean_distance(compute_centroid(clusters[cluster1]),
+                                                              compute_centroid(clusters[i]))
+                dist_matrix[i, cluster1] = dist_matrix[cluster1, i]  # Symmetric update
+
+        # Print the merging information
         print(f"Merged clusters {cluster1} and {cluster2}, Total clusters remaining: {len(clusters)}")
+
     final_centroids = [compute_centroid(cluster) for cluster in clusters]
     return np.array(final_centroids), clusters
 
 
-def show_clusters(final_centroids, clusters):
+def show_clusters(clusters):
     plt.figure(figsize=(8, 8))
     plt.xlim(-5000, 5000)
     plt.ylim(-5000, 5000)
@@ -90,7 +99,7 @@ def show_clusters(final_centroids, clusters):
 
         # Use the colormap with the index
         plt.scatter(cluster_points[:, 0], cluster_points[:, 1], s=5, color=colors(idx), label=f"Cluster {idx + 1}")
-        plt.scatter(centroid[0], centroid[1], s=100, color=colors(idx), edgecolor='black', marker='X')
+        plt.scatter(centroid[0], centroid[1], s=100, color=colors(idx), edgecolor='black', marker='o')
 
     plt.title("Agglomerative Clustering Visualization with Centroids")
     plt.legend()
@@ -98,17 +107,17 @@ def show_clusters(final_centroids, clusters):
 
 
 def main():
-    random.seed(42)
-    np.random.seed(42)
+    random.seed(46)
+    np.random.seed(46)
     coordinates = init_points()
     # Initialize each point as a separate cluster
     clusters = [[point] for point in coordinates]
-
     # Run agglomerative clustering
     final_centroids, final_clusters = agglomerative_centroid(clusters)
 
     # Visualize the clusters and their centroids
-    show_clusters(final_centroids, final_clusters)
+    show_clusters(final_clusters)  # Pass the list of clusters
+
 
 if __name__ == "__main__":
     main()
