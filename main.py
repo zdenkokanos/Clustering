@@ -4,7 +4,7 @@ import math
 import random
 import heapq
 
-ITERATIONS = 1000
+ITERATIONS = 100
 INIT_POINTS = 20
 
 def offset_calculation(coordinate):
@@ -67,7 +67,7 @@ def agglomerative_centroid(clusters):
         for j in range(i + 1, len(clusters)):
             distance = euclidean_distance(compute_centroid(clusters[i]), compute_centroid(clusters[j]))
             heapq.heappush(dist_heap, (distance, i, j))
-    while len(clusters) > 10:
+    while len(clusters) > 20:
         # if not evaluate_clusters(clusters):
         #     print("Threshold exceeded; stopping.")
         #     break  # Stop if any cluster exceeds the threshold
