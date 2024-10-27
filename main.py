@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import math
 import random
-import heapq
 
 ITERATIONS = 1000
 INIT_POINTS = 20
@@ -13,7 +11,6 @@ def offset_calculation(coordinate):
         offset = (5000 - abs(coordinate)) // 2
     return offset
 
-
 def gen_offset(x, y):
     x_offset = offset_calculation(x)
     y_offset = offset_calculation(y)
@@ -21,26 +18,28 @@ def gen_offset(x, y):
     y = y + np.random.randint(-y_offset, y_offset)
     return np.array([x, y])  # Return as a NumPy array
 
+
 def init_points():
-    coordinates_set = set()  
-    coordinates_array = []  
+    coordinates_set = set()
+    clusters = []  # Initialize clusters directly
     while len(coordinates_set) < INIT_POINTS:
         x = np.random.randint(-5000, 5000)
         y = np.random.randint(-5000, 5000)
-        point = np.array([x, y])  
-        coordinates_set.add(tuple(point))  # Store in set to check for uniqueness
-        coordinates_array.append(point)  
-        
-    while len(coordinates_array) < ITERATIONS + INIT_POINTS:
-        random_coordinate = random.choice(coordinates_array)
-        x, y = random_coordinate
-        new_point = gen_offset(x, y)
-        
+        point = np.array((x, y))
+        if tuple(point) not in coordinates_set:  # Check for uniqueness
+            coordinates_set.add(tuple(point))
+            clusters.append([point])  # Create a new cluster for the unique point
+
+    while len(clusters) < ITERATIONS + INIT_POINTS:
+        random_cluster = random.choice(clusters)  # Choose a random cluster
+        x, y = random_cluster[0]  # Get the point from the chosen cluster
+        new_point = gen_offset(x, y)  # Generate a new point based on the chosen point
+
         if tuple(new_point) not in coordinates_set:
-            coordinates_set.add(tuple(new_point))  
-            coordinates_array.append(new_point) 
-            
-    return np.array(coordinates_array)  # Convert the list of arrays to a numpy array
+            coordinates_set.add(tuple(new_point))
+            clusters.append([new_point])  # Add the new point as a new cluster
+
+    return clusters  # Return clusters directly
 
 def euclidean_distance(point1, point2):
     return np.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
@@ -76,7 +75,7 @@ def agglomerative_centroid(clusters):
 
         # Merge the two closest clusters
         print(cluster1, cluster2, len(clusters))
-        clusters[cluster1].extend(clusters[cluster2])
+        clusters[cluster1] = np.vstack([clusters[cluster1], clusters[cluster2]])
         del clusters[cluster2]  # Remove the merged cluster
 
         dist_matrix = np.delete(dist_matrix, cluster2, axis=0)  # Remove the row containing cluster2
@@ -88,7 +87,7 @@ def agglomerative_centroid(clusters):
         for i in range(len(clusters)):  # Update distances to other clusters
             if i != cluster1:  # Avoid updating the distance to itself
                 dist_matrix[cluster1, i] = euclidean_distance(new_centroid, centroid(clusters[i]))
-                dist_matrix[i, cluster1] = dist_matrix[cluster1, i] 
+                dist_matrix[i, cluster1] = dist_matrix[cluster1, i]
         print(f"Merged clusters {cluster1} and {cluster2}, Total clusters remaining: {len(clusters)}")
     final_centroids = [centroid(cluster) for cluster in clusters]
     return np.array(final_centroids), clusters
@@ -117,8 +116,7 @@ def show_clusters(clusters):
 def main():
     random.seed(46)
     np.random.seed(46)
-    coordinates = init_points()
-    clusters = [[point] for point in coordinates]
+    clusters = init_points()
     final_centroids, final_clusters = agglomerative_centroid(clusters)
     show_clusters(final_clusters)
 
