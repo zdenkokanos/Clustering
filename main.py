@@ -4,7 +4,7 @@ import math
 import random
 import heapq
 
-ITERATIONS = 100
+ITERATIONS = 10000
 INIT_POINTS = 20
 
 def offset_calculation(coordinate):
@@ -13,34 +13,52 @@ def offset_calculation(coordinate):
         offset = (5000 - abs(coordinate)) // 2
     return offset
 
+
 def gen_offset(x, y):
     x_offset = offset_calculation(x)
     y_offset = offset_calculation(y)
-    x = x + random.randint(-x_offset, x_offset)
-    y = y + random.randint(-y_offset, y_offset)
-    return x, y  # Return as tuple
+    x = x + np.random.randint(-x_offset, x_offset)
+    y = y + np.random.randint(-y_offset, y_offset)
+    return np.array([x, y])  # Return as a NumPy array
 
 def init_points():
-    coordinates_set = set()
+    coordinates_set = set()  # Use a set to store unique points
+    coordinates_array = []  # Use a list to store points as NumPy arrays
 
+    # Initialize with random unique points
     while len(coordinates_set) < INIT_POINTS:
         x = np.random.randint(-5000, 5000)
         y = np.random.randint(-5000, 5000)
-        coordinates_set.add((x, y))
+        point = np.array([x, y])  # Create a NumPy array
+        coordinates_set.add(tuple(point))  # Store as tuple for uniqueness check
+        coordinates_array.append(point)  # Store as NumPy array
 
-    while len(coordinates_set) < ITERATIONS + INIT_POINTS:
-        random_point = random.choice(list(coordinates_set))
-        x, y = random_point
+    # Generate new points until the desired total count is reached
+    while len(coordinates_array) < ITERATIONS + INIT_POINTS:
+        random_coordinate = random.choice(coordinates_array)
+        x, y = random_coordinate
         new_point = gen_offset(x, y)
-        coordinates_set.add(tuple(new_point))
-    coordinates_array = np.array(list(coordinates_set))
-    return coordinates_array
+
+        # Check for uniqueness using the set
+        if tuple(new_point) not in coordinates_set:
+            coordinates_set.add(tuple(new_point))  # Add as a tuple for the set
+            coordinates_array.append(new_point)  # Keep the new point as a NumPy array
+
+    return np.array(coordinates_array)  # Convert the list of arrays to a NumPy array
 
 def euclidean_distance(point1, point2):
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
 def compute_centroid(cluster):
     return np.mean(cluster, axis=0)
+
+def evaluate_clusters(clusters, threshold=500):
+    for cluster in clusters:
+        centroid = compute_centroid(cluster)
+        avg_distance = np.mean([euclidean_distance(point, centroid) for point in cluster])
+        if avg_distance > threshold:
+            return False  # Stop if any cluster exceeds the threshold
+    return True  # Continue if all clusters meet the threshold
 
 def distance_matrix(clusters):
     num_clusters = len(clusters)
@@ -56,7 +74,10 @@ def agglomerative_centroid(clusters):
     target_clusters = 10
     dist_matrix = distance_matrix(clusters)  # Initialize the distance matrix
 
-    while len(clusters) > target_clusters:
+    while True:
+        if not evaluate_clusters(clusters):
+            print("Threshold exceeded; stopping.")
+            break  # Stop if any cluster exceeds the threshold
         # Find the indices of the two closest clusters
         cluster1, cluster2 = np.unravel_index(np.argmin(dist_matrix), dist_matrix.shape)
 
