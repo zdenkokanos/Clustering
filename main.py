@@ -3,7 +3,7 @@ from scipy.spatial import distance
 import numpy as np
 import random
 
-ITERATIONS = 20000
+ITERATIONS = 1000
 INIT_POINTS = 20
 MAX_DISTANCE = 500
 
@@ -43,29 +43,33 @@ def init_points():
     print("Clusters were initialized..")
     return clusters  # Return clusters directly
 
-def centroid(cluster):
-    return np.mean(cluster, axis=0)
+def medoid(cluster):
+    # Calculate the medoid of a cluster by finding the point closest to the centroid.
+    centroid_value = np.mean(cluster, axis=0)
+    distances = distance.cdist(cluster, [centroid_value], metric='euclidean').flatten()
+    medoid_index = np.argmin(distances)  # Find the index of the closest point to the centroid
+    return cluster[medoid_index]
 
 def evaluate_clusters(clusters):
     for cluster in clusters:
-        centroid_value = centroid(cluster)
-        # Calculate distances from all points in the cluster to the centroid
-        distances = distance.cdist(cluster, [centroid_value], metric='euclidean').flatten()  # Flatten to get a 1D array
+        medoid_value = medoid(cluster)
+        # Calculate distances from all points in the cluster to the medoid
+        distances = distance.cdist(cluster, [medoid_value], metric='euclidean').flatten()  # Flatten to get a 1D array
         avg_distance = np.mean(distances)
         if avg_distance > MAX_DISTANCE:
-            return False  # Stop if any cluster exceeds the MAX_DISTANCE and revert to the previous iteration
+            return False  # Stop if any cluster exceeds the MAX_DISTANCE
     return True  # Continue if all clusters meet the MAX_DISTANCE
 
 def distance_matrix(clusters):
     print("Computing distance matrix...")
-    centroids = np.array([centroid(cluster) for cluster in clusters])  # Precompute centroids to not repeat calculations
-    dist_matrix = distance.cdist(centroids, centroids, metric='euclidean')  # Use SciPy to calculate distance matrix
+    medoids = np.array([medoid(cluster) for cluster in clusters])  # Precompute medoids to avoid repeated calculations
+    dist_matrix = distance.cdist(medoids, medoids, metric='euclidean')  # Use SciPy to calculate distance matrix
     np.fill_diagonal(dist_matrix, np.inf)  # Set distances to itself to infinity
-    return dist_matrix, centroids
+    return dist_matrix, medoids
 
-def agglomerative_centroid(clusters):
-    # Precompute the initial centroids and distance matrix
-    dist_matrix, centroids = distance_matrix(clusters)
+def agglomerative_medoid(clusters):
+    # Precompute the initial medoids and distance matrix
+    dist_matrix, medoids = distance_matrix(clusters)
     previous_clusters = None
 
     while True:
@@ -83,55 +87,51 @@ def agglomerative_centroid(clusters):
         clusters[cluster1] = np.vstack([clusters[cluster1], clusters[cluster2]])
         del clusters[cluster2]  # Remove the merged cluster
 
-        # Recompute the centroid for the new merged cluster
-        centroids[cluster1] = centroid(clusters[cluster1])
-        centroids = np.delete(centroids, cluster2, axis=0)
+        # Recompute the medoid for the new merged cluster
+        medoids[cluster1] = medoid(clusters[cluster1])
+        medoids = np.delete(medoids, cluster2, axis=0)
 
         # Remove cluster2 from the distance matrix and update distances for the new merged cluster
         dist_matrix = np.delete(dist_matrix, cluster2, axis=0)
         dist_matrix = np.delete(dist_matrix, cluster2, axis=1)
-        dist_matrix[cluster1, :] = distance.cdist([centroids[cluster1]], centroids, metric='euclidean')
+        dist_matrix[cluster1, :] = distance.cdist([medoids[cluster1]], medoids, metric='euclidean')
         dist_matrix[:, cluster1] = dist_matrix[cluster1, :]
         dist_matrix[cluster1, cluster1] = np.inf  # Set distance to itself to infinity
 
         print(f"Merged clusters {cluster1} and {cluster2}, Total clusters remaining: {len(clusters)}")
 
-    # Return final centroids and clusters
-    final_centroids = np.array([centroid(cluster) for cluster in previous_clusters])
-    return final_centroids, previous_clusters
-
+    # Return final medoids and clusters
+    final_medoids = np.array([medoid(cluster) for cluster in previous_clusters])
+    return final_medoids, previous_clusters
 
 def show_clusters(clusters):
     plt.figure(figsize=(8, 8))
     plt.xlim(-5000, 5000)
     plt.ylim(-5000, 5000)
 
-    # Use a colormap to generate distinct colors
     colors = plt.colormaps['tab20']
 
     for idx, cluster in enumerate(clusters):
         cluster_points = np.array(cluster)
-        centroid = np.mean(cluster_points, axis=0)
+        medoid_value = medoid(cluster)
 
-        # Use the colormap to assign a distinct color
         plt.scatter(cluster_points[:, 0], cluster_points[:, 1], s=5,
                     color=colors(idx),  # Get color from the colormap
                     label=f"Cluster {idx + 1}")
-        plt.scatter(centroid[0], centroid[1], s=100,
+        plt.scatter(medoid_value[0], medoid_value[1], s=100,
                     color=colors(idx),
                     edgecolor='black', marker='o')
 
-    plt.title("Agglomerative Clustering Visualization with Centroids and 20k points")
+    plt.title("Agglomerative Clustering Visualization with Medoids and 20k points")
     plt.legend()
     plt.show()
 
-
 def main():
-    seed_num = 48
+    seed_num = 43
     random.seed(seed_num)
     np.random.seed(seed_num)
     clusters = init_points()
-    final_centroids, final_clusters = agglomerative_centroid(clusters)
+    final_medoids, final_clusters = agglomerative_medoid(clusters)
     show_clusters(final_clusters)
 
 
