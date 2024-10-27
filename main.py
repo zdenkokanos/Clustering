@@ -4,7 +4,7 @@ import math
 import random
 import heapq
 
-ITERATIONS = 10000
+ITERATIONS = 1000
 INIT_POINTS = 20
 
 def offset_calculation(coordinate):
@@ -50,7 +50,7 @@ def euclidean_distance(point1, point2):
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
 def compute_centroid(cluster):
-    return np.mean(cluster, axis=0)
+    return np.mean(cluster, axis=0)  # computing centroid using np.mean because of its effectivity
 
 def evaluate_clusters(clusters, threshold=500):
     for cluster in clusters:
@@ -60,45 +60,39 @@ def evaluate_clusters(clusters, threshold=500):
             return False  # Stop if any cluster exceeds the threshold
     return True  # Continue if all clusters meet the threshold
 
-def distance_matrix(clusters):
-    num_clusters = len(clusters)
-    dist_matrix = np.full((num_clusters, num_clusters), np.inf)
-
-    for i in range(num_clusters):
-        for j in range(i + 1, num_clusters):
-            dist_matrix[i, j] = euclidean_distance(compute_centroid(clusters[i]), compute_centroid(clusters[j]))
-            dist_matrix[j, i] = dist_matrix[i, j]
-    return dist_matrix
-
 def agglomerative_centroid(clusters):
-    target_clusters = 10
-    dist_matrix = distance_matrix(clusters)  # Initialize the distance matrix
+    dist_heap = []
 
-    while True:
-        if not evaluate_clusters(clusters):
-            print("Threshold exceeded; stopping.")
-            break  # Stop if any cluster exceeds the threshold
-        # Find the indices of the two closest clusters
-        cluster1, cluster2 = np.unravel_index(np.argmin(dist_matrix), dist_matrix.shape)
+    for i in range(len(clusters)):
+        for j in range(i + 1, len(clusters)):
+            distance = euclidean_distance(compute_centroid(clusters[i]), compute_centroid(clusters[j]))
+            heapq.heappush(dist_heap, (distance, i, j))
+    while len(clusters) > 10:
+        # if not evaluate_clusters(clusters):
+        #     print("Threshold exceeded; stopping.")
+        #     break  # Stop if any cluster exceeds the threshold
+        # # Find the indices of the two closest clusters
+        distance, cluster1, cluster2 = heapq.heappop(dist_heap)
 
-        # Merge the two closest clusters
-        print(cluster1, cluster2, len(clusters))
+        if cluster1 >= len(clusters) or cluster2 >= len(clusters):
+            continue
+
         clusters[cluster1].extend(clusters[cluster2])
-        del clusters[cluster2]  # Remove the merged cluster
+        del clusters[cluster2]
 
-        dist_matrix = np.delete(dist_matrix, cluster2, axis=0)  # Remove the row for cluster2
-        dist_matrix = np.delete(dist_matrix, cluster2, axis=1)  # Remove the column for cluster2
+        filtered_heap = []
+        for (d, i, j) in dist_heap:
+            if i != cluster2 and j != cluster2:
+                filtered_heap.append((d, i, j))
 
-        # Update the distance matrix
-        # Set the distance from the merged cluster to itself to inf
-        dist_matrix[cluster1, cluster1] = np.inf
+        dist_heap = filtered_heap
+        heapq.heapify(dist_heap)
 
-        # Update distances for the merged cluster with respect to the remaining clusters
+        new_centroid = compute_centroid(clusters[cluster1])
         for i in range(len(clusters)):
-            if i != cluster1:  # Avoid updating the distance to itself
-                dist_matrix[cluster1, i] = euclidean_distance(compute_centroid(clusters[cluster1]),
-                                                              compute_centroid(clusters[i]))
-                dist_matrix[i, cluster1] = dist_matrix[cluster1, i]  # Symmetric update
+            if i != cluster1:  # Avoid calculating the distance to itself
+                new_distance = euclidean_distance(new_centroid, compute_centroid(clusters[i]))
+                heapq.heappush(dist_heap, (new_distance, cluster1, i))
 
         # Print the merging information
         print(f"Merged clusters {cluster1} and {cluster2}, Total clusters remaining: {len(clusters)}")
