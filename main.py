@@ -33,15 +33,15 @@ def init_points():
             clusters.append([point])  # Create a new cluster for the unique point
 
     while len(clusters) < ITERATIONS + INIT_POINTS:
-        random_cluster = random.choice(clusters)  # Choose a random cluster
-        x, y = random_cluster[0]  # Get the point from the chosen cluster
+        random_cluster = random.choice(clusters)
+        x, y = random_cluster[0]
         new_point = gen_offset(x, y)  # Generate a new point based on the chosen point
 
         if tuple(new_point) not in coordinates_set:
             coordinates_set.add(tuple(new_point))
             clusters.append([new_point])  # Add the new point as a new cluster
     print("Clusters were initialized..")
-    return clusters  # Return clusters directly
+    return clusters
 
 def centroid(cluster):
     return np.mean(cluster, axis=0)
@@ -56,10 +56,12 @@ def evaluate_clusters(clusters):
             return False  # Stop if any cluster exceeds the MAX_DISTANCE and revert to the previous iteration
     return True  # Continue if all clusters meet the MAX_DISTANCE
 
+
+# Use SciPy to calculate distance matrix
 def distance_matrix(clusters):
     print("Computing distance matrix...")
     centroids = np.array([centroid(cluster) for cluster in clusters])  # Precompute centroids to not repeat calculations
-    dist_matrix = distance.cdist(centroids, centroids, metric='euclidean')  # Use SciPy to calculate distance matrix
+    dist_matrix = distance.cdist(centroids, centroids, metric='euclidean')
     np.fill_diagonal(dist_matrix, np.inf)  # Set distances to itself to infinity
     return dist_matrix, centroids
 
@@ -96,9 +98,7 @@ def agglomerative_centroid(clusters):
 
         print(f"Merged clusters {cluster1} and {cluster2}, Total clusters remaining: {len(clusters)}")
 
-    # Return final centroids and clusters
-    final_centroids = np.array([centroid(cluster) for cluster in previous_clusters])
-    return final_centroids, previous_clusters
+    return previous_clusters
 
 
 def show_clusters(clusters):
@@ -109,16 +109,16 @@ def show_clusters(clusters):
     # Use a colormap to generate distinct colors
     colors = plt.colormaps['tab20']
 
-    for idx, cluster in enumerate(clusters):
+    for i, cluster in enumerate(clusters):
         cluster_points = np.array(cluster)
-        centroid = np.mean(cluster_points, axis=0)
+        centroid_value = centroid(cluster_points)
 
         # Use the colormap to assign a distinct color
         plt.scatter(cluster_points[:, 0], cluster_points[:, 1], s=5,
-                    color=colors(idx),  # Get color from the colormap
-                    label=f"Cluster {idx + 1}")
-        plt.scatter(centroid[0], centroid[1], s=100,
-                    color=colors(idx),
+                    color=colors(i),  # Get color from the colormap
+                    label=f"Cluster {i + 1}")
+        plt.scatter(centroid_value[0], centroid_value[1], s=100,
+                    color=colors(i),
                     edgecolor='black', marker='o')
 
     plt.title("Agglomerative Clustering Visualization with Centroids and 20k points")
@@ -131,7 +131,7 @@ def main():
     random.seed(seed_num)
     np.random.seed(seed_num)
     clusters = init_points()
-    final_centroids, final_clusters = agglomerative_centroid(clusters)
+    final_clusters = agglomerative_centroid(clusters)
     show_clusters(final_clusters)
 
 
