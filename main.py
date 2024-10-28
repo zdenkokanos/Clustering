@@ -127,7 +127,7 @@ def show_clusters(clusters):
 
 
 def main():
-    seed_num = 43
+    seed_num = 42
     random.seed(seed_num)
     np.random.seed(seed_num)
     clusters = init_points()
